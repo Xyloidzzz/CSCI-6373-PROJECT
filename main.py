@@ -2,6 +2,7 @@
 # main.py
 #
 # CSCI 6373 - Information Retrieval and Web Search
+# Dr. Zhixiang Chen
 # Fall 2025
 # Project Part 1
 #
