@@ -1,3 +1,20 @@
+#####################################################
+# HTMLParser.py
+#
+# CSCI 6373 - Information Retrieval and Web Search
+# Fall 2025
+# Project Part 1
+#
+# Created: 2025-09-04
+# Last Edited: 2025-09-04
+#
+# Authors:
+#   - Aly Gutierrez (ID: ########)
+#   - Luis Martinez (ID: ########)
+#   - Tristan Rodriguez (ID: ########)
+#   - Alfredo Peña (ID: 20217083)
+#####################################################
+
 import zipfile
 import os
 import re
