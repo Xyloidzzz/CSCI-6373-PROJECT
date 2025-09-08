@@ -25,6 +25,7 @@ class HTMLParser:
         self.zip_path = zip_path
         self.folder_name = folder_name
         self.index = {}
+        self.documents = {}
         self._build_index()
 
     def _build_index(self):
@@ -35,10 +36,13 @@ class HTMLParser:
                         html_content = f.read().decode("utf-8", errors="ignore")
                         words = self.parse(html_content)
                         base_name = os.path.basename(file_name)
-                        for word in words:
+                        self.documents[base_name] = words
+                        for pos, word in enumerate(words):
                             if word not in self.index:
-                                self.index[word] = set()
-                            self.index[word].add(base_name)
+                                self.index[word] = {}
+                            if base_name not in self.index[word]:
+                                self.index[word][base_name] = [] 
+                            self.index[word][base_name].append(pos)
                             
     def parse(self, html_content):
         text = re.sub(r"<[^>]+>", " ", html_content) # tag killer
@@ -46,7 +50,19 @@ class HTMLParser:
         return words
 
     def search(self, term):
-        term = term.lower()
-        if term in self.index:
-            return sorted(self.index[term])
-        return []
+        pharse_terms = term.lower().split()
+        if not pharse_terms:
+            return []
+        
+        firstword = pharse_terms[0]
+        if firstword not in self.index:
+            return []
+
+        results = []
+        for file, postions in self.index[firstword].items():
+            words = self.documents[file]
+            for pos in postions:
+                if words[pos:pos + len(pharse_terms)] == pharse_terms:
+                    results.append(file)
+                    break
+        return sorted(results)
