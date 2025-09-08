@@ -21,4 +21,7 @@ Search Engine Website precursor that indexes HTML files from a ZIP archive and a
 
 ## Commands While Running
 
+- `/help`: Display help information.
+- `/list`: List all indexed HTML files.
+- `/list [n]`: List the first `n` indexed HTML files.
 - `/exit`: Exit the search engine.
