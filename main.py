@@ -10,9 +10,9 @@
 # Last Edited: 2025-09-04
 #
 # Authors:
-#   - Aly Gutierrez (ID: ########)
-#   - Luis Martinez (ID: ########)
-#   - Tristan Rodriguez (ID: ########)
+#   - Aly Gutierrez (ID: 20027057)
+#   - Luis Martinez (ID: 20578284)
+#   - Tristan Rodriguez (ID: 20499834)
 #   - Alfredo Peña (ID: 20217083)
 #####################################################
 
