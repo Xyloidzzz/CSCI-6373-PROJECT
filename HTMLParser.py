@@ -66,3 +66,6 @@ class HTMLParser:
                     results.append(file)
                     break
         return sorted(results)
+    
+    def get_indexed_words(self):
+        return sorted(self.index.keys())
