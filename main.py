@@ -10,10 +10,10 @@
 # Last Edited: 2025-09-07
 #
 # Authors:
-#   - Aly Gutierrez (ID: 20027057)
-#   - Luis Martinez (ID: 20578284)
-#   - Tristan Rodriguez (ID: 20499834)
-#   - Alfredo Peña (ID: 20217083)
+#   - Aly Gutierrez
+#   - Luis Martinez
+#   - Tristan Rodriguez
+#   - Alfredo Peña
 #####################################################
 
 from HTMLParser import HTMLParser
