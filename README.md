@@ -4,7 +4,7 @@ CSCI 6373 - Information Retrieval and Web Search Group Project
 
 ## Project Members
 
-- Aly Gutierrez
+- Ariana Gutierrez
 - Luis Martinez
 - Tristan Rodriguez
 - Alfredo Peña

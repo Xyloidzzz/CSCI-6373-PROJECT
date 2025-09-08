@@ -10,7 +10,7 @@
 # Last Edited: 2025-09-07
 #
 # Authors:
-#   - Aly Gutierrez
+#   - Ariana Gutierrez
 #   - Luis Martinez
 #   - Tristan Rodriguez
 #   - Alfredo Peña
