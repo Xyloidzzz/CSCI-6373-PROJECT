@@ -49,12 +49,12 @@ class HTMLParser:
         words = re.findall(r"\b\w+\b", text.lower()) # split and lowercase
         return words
 
-    def search(self, term):
-        pharse_terms = term.lower().split()
-        if not pharse_terms:
+    def search(self, query):
+        terms = query.lower().split()
+        if not terms:
             return []
         
-        firstword = pharse_terms[0]
+        firstword = terms[0]
         if firstword not in self.index:
             return []
 
@@ -62,7 +62,7 @@ class HTMLParser:
         for file, postions in self.index[firstword].items():
             words = self.documents[file]
             for pos in postions:
-                if words[pos:pos + len(pharse_terms)] == pharse_terms:
+                if words[pos:pos + len(terms)] == terms:
                     results.append(file)
                     break
         return sorted(results)
