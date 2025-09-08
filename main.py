@@ -32,15 +32,20 @@ def main():
             print("Enter one search term to find matching files.")
             print("Enter multiple search terms separated by spaces to find files containing that exact phrase.")
             print("The phrase must appear in the same order in the file.")
-            print("Type '/list' to see a list of indexed words (first 50).")
+            print("Type '/list [n]' to see a list of indexed words (default first 50, or specify n).")
             continue
         elif query.startswith("/list"):
+            parts = query.split()
+            limit = 50
+            if len(parts) > 1 and parts[1].isdigit():
+                limit = int(parts[1])
+
             words = parser.get_indexed_words()
             print(f"Total Indexed Words: {len(words)}")
-            for word in words[:50]:
+            for word in words[:limit]:
                 print(word)
-            if len(words) > 50:
-                print("... (showing first 50 only)")
+            if len(words) > limit:
+                print(f"... (showing first {limit} only)")
             continue
 
         results = parser.search(query)
