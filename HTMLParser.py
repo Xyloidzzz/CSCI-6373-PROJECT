@@ -50,8 +50,7 @@ class HTMLParser:
     def _build_inverted_index(self):
         """
         inverted_index: {
-            {
-                'term':str,
+            'term': {
                 'df':int,
                 'postings':{
                     {'freq':int, 'tfidf':float, 'positions':List[int]}
@@ -118,30 +117,4 @@ class HTMLParser:
     
     def get_indexed_words(self):
         return sorted(self.index.keys())
-    
-    def invert_index(self):
-        """
-        index: {word:{doc_name:[idx1, idx2,...],...},...} ->
-        inverted_index: [
-            {
-                'index':int,
-                'term':str,
-                'df':int,
-                'postings':[
-                    {'doc_id':int , 'freq':int, 'tfidf':float, 'positions':List[int]}
-                ]
-            }
-        ]
-        """
-        for word in self.index:
-            print(word, self.index[word], self.inverted_index.keys())
-            print(self.index[word].keys())
-            if word not in self.inverted_index.keys():
-                self.inverted_index[word] = (1)
-            else:
-                self.inverted_index[word] += 1
-
-            break
-
-        print(self.inverted_index)
 
