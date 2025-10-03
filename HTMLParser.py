@@ -52,7 +52,7 @@ class HTMLParser:
         inverted_index: {
             'term': {
                 'df':int,
-                'postings':{
+                'docs':{
                     {'freq':int, 'tfidf':float, 'positions':List[int]}
                 }
             }
@@ -98,9 +98,13 @@ class HTMLParser:
         return words
 
     def search(self, query):
+        pattern = r'\b\w+\b\s+(and|but|or)\s+\b\w+\b' #pattern for boolean query
         terms = query.lower().split()
         if not terms:
             return []
+        
+        if re.findall(pattern, query):
+            return self.boolean_search(query)
         
         firstword = terms[0]
         if firstword not in self.index:
@@ -117,4 +121,35 @@ class HTMLParser:
     
     def get_indexed_words(self):
         return sorted(self.index.keys())
+    
+    def get_doc_names(self, word):
+        """
+        Gets document dictionary for a given word from the inverted index.
 
+        Parameters:
+            Word (str): Word that is being looked up.
+
+        Returns:
+            dict: Dictionary of document ID (e.g. dict([doc_name1, doc_name2,...]))
+                  Returns empty dictionary if word is not found.
+        """
+        entry = self.inverted_index.get(word)
+        if entry == None:
+            return set()
+        else:
+            return set(entry['docs'].keys())
+
+    def boolean_search(self, query):
+        words = re.split(r'\s+(and|or|but)\s+', query)
+        results = self.get_doc_names(words[0])
+        for i in range(1, len(words), 2):
+            operator = words[i]
+            right = self.get_doc_names(words[i+1])
+
+            if operator == 'and':
+                results &= right
+            elif operator == 'or':
+                results |= right
+            elif operator == 'but':
+                results -= right
+        return results
