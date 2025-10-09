@@ -117,12 +117,15 @@ class HTMLParser:
         # returns a list of urls in html
         links = re.findall(r'href\s*=\s*["\']([^"\']+)["\']', html_content, flags=re.IGNORECASE)
         return links
+    
+    def _tokenize_query(self, text):
+        # split, lowercase, and remove stop-words
+        tokens = re.findall(r"\b\w+\b", text.lower())
+        return [t for t in tokens if t not in STOPWORDS]
 
     def parse(self, html_content):
         text = re.sub(r"<[^>]+>", " ", html_content, flags=re.IGNORECASE) # tag killer
-        words = re.findall(r"\b\w+\b", text.lower()) # split and lowercase
-        words = [w for w in words if w not in STOPWORDS] # remove stop-words
-        return words
+        return self._tokenize_query(text)
 
     def search(self, query):
         pattern = r'\b\w+\b\s+(and|but|or)\s+\b\w+\b' # pattern for boolean query
