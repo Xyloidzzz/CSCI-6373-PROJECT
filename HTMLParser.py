@@ -28,6 +28,8 @@ class HTMLParser:
         self.index = {}
         self.inverted_index = {}
         self.documents = {}
+        self.doc_stats = {}
+        self.links = {}
         self._build_index()
         self._build_inverted_index()
 
@@ -39,58 +41,48 @@ class HTMLParser:
                         html_content = f.read().decode("utf-8", errors="ignore")
                         words = self.parse(html_content)
                         base_name = os.path.basename(file_name)
+                        self.doc_stats[base_name] = {'length': len(words)}
                         self.documents[base_name] = words
                         for pos, word in enumerate(words):
                             if word not in self.index:
                                 self.index[word] = {}
                             if base_name not in self.index[word]:
-                                self.index[word][base_name] = [] 
+                                self.index[word][base_name] = []
                             self.index[word][base_name].append(pos)
 
     def _build_inverted_index(self):
         """
         inverted_index: {
             'term': {
-                'df':int,
-                'docs':{
-                    {'freq':int, 'tfidf':float, 'positions':List[int]}
+                'df': int,
+                'docs': {
+                    doc_id: {'freq': int, 'tfidf': float, 'positions': list[int]}
                 }
             }
         }
         """
-        doc_lengths = {}
-        with zipfile.ZipFile(self.zip_path, 'r') as z:
-            N = len(z.namelist())
-            for file_name in z.namelist():
-                with z.open(file_name) as f:
-                    html_content = f.read().decode("utf-8", errors="ignore")
-                    words = self.parse(html_content)
-                    doc_lengths[file_name] = len(words)
-                    for pos, word in enumerate(words):
-                        if word not in self.inverted_index:
-                            self.inverted_index[word] = {
-                                'df': 0,
-                                'docs':{} # doc_id ->{freq, tfdif, positions}
-                            }
-                        word_docs = self.inverted_index[word]
-                        docs = word_docs['docs']
+        N = len(self.documents)
+        # aggregate freq and positions using base_name ids
+        for doc_name, words in self.documents.items():
+            for pos, word in enumerate(words):
+                if word not in self.inverted_index:
+                    self.inverted_index[word] = {'df': 0, 'docs': {}}
+                word_entry = self.inverted_index[word]
+                if doc_name not in word_entry['docs']:
+                    word_entry['docs'][doc_name] = {'freq': 0, 'tfidf': 0.0, 'positions': []}
+                    word_entry['df'] += 1
+                posting = word_entry['docs'][doc_name]
+                posting['freq'] += 1
+                posting['positions'].append(pos)
 
-                        if file_name not in docs:
-                            word_docs['df'] += 1
-                            docs[file_name] = {'freq':0, 'tfidf':0, 'positions':[]}
-                        
-                        docs = docs[file_name]
-                        docs['freq'] += 1
-                        docs['positions'].append(pos)
-
+        # compute preliminary tf-idf
         for word, word_entry in self.inverted_index.items():
             df = word_entry['df']
-            idf = math.log(N / (df + 1), 2) + 1
-
-            for doc_name, doc_entry in word_entry['docs'].items():
-                freq = doc_entry['freq']
-                tf = freq / doc_lengths[doc_name]
-                doc_entry['tfidf'] = tf * idf
+            idf = math.log((N + 1) / (df + 1)) + 1.0
+            for doc_name, posting in word_entry['docs'].items():
+                freq = posting['freq']
+                tf = freq / max(1, self.doc_stats[doc_name]['length'])
+                posting['tfidf'] = tf * idf
 
     def parse(self, html_content):
         text = re.sub(r"<[^>]+>", " ", html_content) # tag killer
@@ -140,16 +132,16 @@ class HTMLParser:
             return set(entry['docs'].keys())
 
     def boolean_search(self, query):
-        words = re.split(r'\s+(and|or|but)\s+', query)
+        words = re.split(r'\s+(and|or|but)\s+', query.lower())
         results = self.get_doc_names(words[0])
         for i in range(1, len(words), 2):
             operator = words[i]
             right = self.get_doc_names(words[i+1])
-
             if operator == 'and':
                 results &= right
             elif operator == 'or':
                 results |= right
             elif operator == 'but':
                 results -= right
-        return results
+        # temp sorted list of base_name ids, later we gone rank aight
+        return sorted(results)
