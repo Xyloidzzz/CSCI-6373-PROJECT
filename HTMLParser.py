@@ -37,6 +37,7 @@ class HTMLParser:
         self.doc_stats = {}
         self.links = {}
         self._build_index()
+        self.num_docs = len(self.documents)
         self._build_inverted_index()
 
     def _build_index(self):
@@ -74,8 +75,6 @@ class HTMLParser:
             }
         }
         """
-        N = len(self.documents)
-        
         # aggregate freq and positions using base_name ids
         for doc_name, words in self.documents.items():
             for pos, word in enumerate(words):
@@ -93,7 +92,7 @@ class HTMLParser:
         idf_cache = {}
         for word, word_entry in self.inverted_index.items():
             df = word_entry['df']
-            idf_cache[word] = math.log((N + 1) / (df + 1)) + 1.0
+            idf_cache[word] = math.log((self.num_docs + 1) / (df + 1)) + 1.0
 
         # raw tf-idf with log tf
         doc_norm = {doc: 0.0 for doc in self.documents}
