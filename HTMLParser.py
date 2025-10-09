@@ -21,6 +21,12 @@ import os
 import re
 import math
 
+STOPWORDS = {
+    'a','an','and','are','as','at','be','but','by','for','if','in','into','is','it',
+    'no','not','of','on','or','such','that','the','their','then','there','these','they',
+    'this','to','was','will','with','from','we','you','your','i','our','us'
+}
+
 class HTMLParser:
     def __init__(self, zip_path="Jan.zip", folder_name="Jan"):
         self.zip_path = zip_path
@@ -87,10 +93,11 @@ class HTMLParser:
     def parse(self, html_content):
         text = re.sub(r"<[^>]+>", " ", html_content) # tag killer
         words = re.findall(r"\b\w+\b", text.lower()) # split and lowercase
+        words = [w for w in words if w not in STOPWORDS] # remove stop-words
         return words
 
     def search(self, query):
-        pattern = r'\b\w+\b\s+(and|but|or)\s+\b\w+\b' #pattern for boolean query
+        pattern = r'\b\w+\b\s+(and|but|or)\s+\b\w+\b' # pattern for boolean query
         terms = query.lower().split()
         if not terms:
             return []
