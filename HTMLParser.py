@@ -152,20 +152,13 @@ class HTMLParser:
     
     def get_doc_names(self, word):
         """
-        Gets document dictionary for a given word from the inverted index.
-
-        Parameters:
-            Word (str): Word that is being looked up.
-
-        Returns:
-            dict: Dictionary of document ID (e.g. dict([doc_name1, doc_name2,...]))
-                  Returns empty dictionary if word is not found.
+            gets document set for a given word from the inverted index.
+            returns an empty set if not found.
         """
         entry = self.inverted_index.get(word)
-        if entry == None:
+        if entry is None:
             return set()
-        else:
-            return set(entry['docs'].keys())
+        return set(entry['docs'].keys())
 
     def boolean_search(self, query):
         words = re.split(r'\s+(and|or|but)\s+', query.lower())
