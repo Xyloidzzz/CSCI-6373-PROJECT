@@ -118,6 +118,14 @@ class HTMLParser:
         links = re.findall(r'href\s*=\s*["\']([^"\']+)["\']', html_content, flags=re.IGNORECASE)
         return links
     
+    def _idf(self, term):
+        # compute idf using df from inverted index and num_docs
+        entry = self.inverted_index.get(term)
+        if not entry:
+            return 0.0
+        df = entry['df']
+        return math.log((self.num_docs + 1) / (df + 1)) + 1.0
+    
     def _tokenize_query(self, text):
         # split, lowercase, and remove stop-words
         tokens = re.findall(r"\b\w+\b", text.lower())
@@ -176,3 +184,57 @@ class HTMLParser:
                 results -= right
         # temp sorted list of base_name ids, later we gone rank aight
         return sorted(results)
+    
+    def vector_search(self, query, top_k=None):
+        # tokenize query
+        terms = self._tokenize_query(query)
+        if not terms:
+            return []
+
+        # compute query term frequencies
+        qtf = {}
+        for t in terms:
+            qtf[t] = qtf.get(t, 0) + 1
+
+        # compute query weights = log tf * idf
+        qw = {}
+        for t, f in qtf.items():
+            tf = 0.0 if f <= 0 else (1.0 + math.log(f))
+            idf = self._idf(t)
+            w = tf * idf
+            if w > 0:
+                qw[t] = w
+
+        if not qw:
+            return []
+
+        # compute query norm
+        qnorm_sq = sum(w*w for w in qw.values())
+        qnorm = math.sqrt(qnorm_sq) if qnorm_sq > 0 else 1.0
+
+        # accumulate scores using normalized doc weights from postings
+        # doc -> score numerator = sum w_tq * norm_w_td
+        scores = {}
+        for t, w_tq in qw.items():
+            entry = self.inverted_index.get(t)
+            if not entry:
+                continue
+            for doc_name, posting in entry['docs'].items():
+                contrib = w_tq * posting.get('norm_tfidf', 0.0)
+                if contrib != 0.0:
+                    scores[doc_name] = scores.get(doc_name, 0.0) + contrib
+
+        if not scores:
+            return []
+
+        # divide by query norm to complete cosine
+        for d in scores:
+            scores[d] = scores[d] / qnorm
+
+        # sort by descending score, then doc name
+        ranked = sorted(scores.items(), key=lambda x: (-x[1], x[0]))
+        if top_k is not None:
+            ranked = ranked[:top_k]
+
+        # return only doc names in ranked order
+        return [doc for doc, _ in ranked]
