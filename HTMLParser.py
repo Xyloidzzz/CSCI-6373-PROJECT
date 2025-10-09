@@ -4,7 +4,6 @@
 # CSCI 6373 - Information Retrieval and Web Search
 # Dr. Zhixiang Chen
 # Fall 2025
-# Project Part 1
 #
 # Created: 2025-09-04
 # Last Edited: 2025-10-09

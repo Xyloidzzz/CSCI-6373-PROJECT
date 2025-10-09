@@ -16,12 +16,14 @@ Search Engine Website precursor that indexes HTML files from a ZIP archive and a
 ## How to Run
 
 1. Ensure you have Python installed on your machine.
-2. Run the script: `python main.py`
-3. Enter search terms when prompted to find relevant HTML file names.
+2. Install required packages: `pip install -r requirements.txt`
+3. Run the script: `python main.py`
+4. Enter search terms when prompted to find relevant HTML file names.
 
-## Commands While Running
+Your search engine will be accessible at: `http://localhost:5000/`
 
-- `/help`: Display help information.
-- `/list`: List all indexed HTML files.
-- `/list [n]`: List the first `n` indexed HTML files.
-- `/exit`: Exit the search engine.
+## Supported Search Types
+
+- Boolean Search: Use `and`, `or`, and parentheses for complex queries.
+- Phrase Search: Enclose phrases in double quotes (e.g., `"information retrieval"`).
+- Ranked Vector Search: Enter terms normally for ranked results.

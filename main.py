@@ -4,10 +4,9 @@
 # CSCI 6373 - Information Retrieval and Web Search
 # Dr. Zhixiang Chen
 # Fall 2025
-# Project Part 1
 #
 # Created: 2025-09-04
-# Last Edited: 2025-09-07
+# Last Edited: 2025-10-09
 #
 # Authors:
 #   - Ariana Gutierrez
@@ -16,43 +15,20 @@
 #   - Alfredo Peña
 #####################################################
 
+from flask import Flask, render_template, request
 from HTMLParser import HTMLParser
 
-def main():
-    parser = HTMLParser()
+parser = HTMLParser()
 
-    print("SEARCH ENGINE PRIMED AND READY. (type '/exit' to quit, '/help' for instructions.)")
-    while True:
-        query = input("Search Term: ").strip()
-        
-        if query.startswith("/exit"):
-            print("Bye!")
-            break
-        elif query.startswith("/help"):
-            print("Enter one search term to find matching files.")
-            print("Enter multiple search terms separated by spaces to find files containing that exact phrase.")
-            print("The phrase must appear in the same order in the file.")
-            print("Type '/list [n]' to see a list of indexed words (default first 50, or specify n).")
-            continue
-        elif query.startswith("/list"):
-            parts = query.split()
-            limit = 50
-            if len(parts) > 1 and parts[1].isdigit():
-                limit = int(parts[1])
+app = Flask(__name__)
 
-            words = parser.get_indexed_words()
-            print(f"Total Indexed Words: {len(words)}")
-            for word in words[:limit]:
-                print(word)
-            if len(words) > limit:
-                print(f"... (showing first {limit} only)")
-            continue
-
-        results = parser.search(query)
-        if results:
-            print("\n".join(results))
-        else:
-            print("No Match...")
+@app.route("/", methods=["GET"])
+def home():
+    q = (request.args.get("q") or "").strip()
+    results = None
+    if q:
+        results = parser.search(q) or []
+    return render_template("index.html", q=q, results=results)
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True)
