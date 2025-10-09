@@ -64,12 +64,18 @@ class HTMLParser:
             'term': {
                 'df': int,
                 'docs': {
-                    doc_id: {'freq': int, 'tfidf': float, 'positions': list[int]}
+                    doc_id: {
+                        'freq': int,
+                        'tfidf': float,
+                        'norm_tfidf': float,
+                        'positions': list[int]
+                    }
                 }
             }
         }
         """
         N = len(self.documents)
+        
         # aggregate freq and positions using base_name ids
         for doc_name, words in self.documents.items():
             for pos, word in enumerate(words):
@@ -77,20 +83,36 @@ class HTMLParser:
                     self.inverted_index[word] = {'df': 0, 'docs': {}}
                 word_entry = self.inverted_index[word]
                 if doc_name not in word_entry['docs']:
-                    word_entry['docs'][doc_name] = {'freq': 0, 'tfidf': 0.0, 'positions': []}
+                    word_entry['docs'][doc_name] = {'freq': 0, 'tfidf': 0.0, 'norm_tfidf': 0.0, 'positions': []}
                     word_entry['df'] += 1
                 posting = word_entry['docs'][doc_name]
                 posting['freq'] += 1
                 posting['positions'].append(pos)
 
         # compute preliminary tf-idf
+        idf_cache = {}
         for word, word_entry in self.inverted_index.items():
             df = word_entry['df']
-            idf = math.log((N + 1) / (df + 1)) + 1.0
+            idf_cache[word] = math.log((N + 1) / (df + 1)) + 1.0
+
+        # raw tf-idf with log tf
+        doc_norm = {doc: 0.0 for doc in self.documents}
+        for word, word_entry in self.inverted_index.items():
+            idf = idf_cache[word]
             for doc_name, posting in word_entry['docs'].items():
                 freq = posting['freq']
-                tf = freq / max(1, self.doc_stats[doc_name]['length'])
-                posting['tfidf'] = tf * idf
+                tf = 0.0 if freq <= 0 else (1.0 + math.log(freq))
+                w = tf * idf
+                posting['tfidf'] = w
+                doc_norm[doc_name] += w * w
+
+        # normalize per doc
+        for doc_name in doc_norm:
+            doc_norm[doc_name] = math.sqrt(doc_norm[doc_name]) if doc_norm[doc_name] > 0 else 1.0
+
+        for word_entry in self.inverted_index.values():
+            for doc_name, posting in word_entry['docs'].items():
+                posting['norm_tfidf'] = posting['tfidf'] / doc_norm[doc_name]
                 
     def _extract_links(self, html_content):
         # returns a list of urls in html
