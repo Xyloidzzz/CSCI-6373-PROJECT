@@ -49,6 +49,8 @@ class HTMLParser:
                         base_name = os.path.basename(file_name)
                         self.doc_stats[base_name] = {'length': len(words)}
                         self.documents[base_name] = words
+                        self.links[base_name] = self._extract_links(html_content)
+
                         for pos, word in enumerate(words):
                             if word not in self.index:
                                 self.index[word] = {}
@@ -89,6 +91,11 @@ class HTMLParser:
                 freq = posting['freq']
                 tf = freq / max(1, self.doc_stats[doc_name]['length'])
                 posting['tfidf'] = tf * idf
+                
+    def _extract_links(self, html_content):
+        # returns a list of urls in html
+        links = re.findall(r'href\s*=\s*["\']([^"\']+)["\']', html_content, flags=re.IGNORECASE)
+        return links
 
     def parse(self, html_content):
         text = re.sub(r"<[^>]+>", " ", html_content) # tag killer
