@@ -147,6 +147,24 @@ class HTMLParser:
         if entry is None:
             return set()
         return set(entry['docs'].keys())
+    
+    def search(self, query):
+        q = query.strip()
+        if not q:
+            return []
+
+        # boolean search
+        if re.search(r"\b(and|or|but)\b", q.lower()):
+            return self.boolean_search(q)
+
+        # quoted phrase
+        m = re.search(r'"([^"]+)"', q)
+        if m:
+            phrase = m.group(1)
+            return self.phrase_search(phrase) # TODO: implement phrase search
+
+        # DEFAULT BEHAVIOR -> vector-space ranking
+        return self.vector_search(q)
 
     def boolean_search(self, query):
         words = re.split(r'\s+(and|or|but)\s+', query.lower())
@@ -163,27 +181,8 @@ class HTMLParser:
         # temp sorted list of base_name ids, later we gone rank aight
         return sorted(results)
     
-    def search(self, query):
-        pattern = r'\b\w+\b\s+(and|but|or)\s+\b\w+\b' # pattern for boolean query
-        terms = query.lower().split()
-        if not terms:
-            return []
-        
-        if re.findall(pattern, query):
-            return self.boolean_search(query)
-        
-        firstword = terms[0]
-        if firstword not in self.index:
-            return []
-
-        results = []
-        for file, postions in self.index[firstword].items():
-            words = self.documents[file]
-            for pos in postions:
-                if words[pos:pos + len(terms)] == terms:
-                    results.append(file)
-                    break
-        return sorted(results)
+    def phrase_search(self, phrase):
+        return [] # TODO: implement phrase search
     
     def vector_search(self, query, top_k=None):
         # tokenize query
@@ -238,3 +237,4 @@ class HTMLParser:
 
         # return only doc names in ranked order
         return [doc for doc, _ in ranked]
+    
