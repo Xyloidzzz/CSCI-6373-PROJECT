@@ -134,28 +134,6 @@ class HTMLParser:
     def parse(self, html_content):
         text = re.sub(r"<[^>]+>", " ", html_content, flags=re.IGNORECASE) # tag killer
         return self._tokenize_query(text)
-
-    def search(self, query):
-        pattern = r'\b\w+\b\s+(and|but|or)\s+\b\w+\b' # pattern for boolean query
-        terms = query.lower().split()
-        if not terms:
-            return []
-        
-        if re.findall(pattern, query):
-            return self.boolean_search(query)
-        
-        firstword = terms[0]
-        if firstword not in self.index:
-            return []
-
-        results = []
-        for file, postions in self.index[firstword].items():
-            words = self.documents[file]
-            for pos in postions:
-                if words[pos:pos + len(terms)] == terms:
-                    results.append(file)
-                    break
-        return sorted(results)
     
     def get_indexed_words(self):
         return sorted(self.index.keys())
@@ -183,6 +161,28 @@ class HTMLParser:
             elif operator == 'but':
                 results -= right
         # temp sorted list of base_name ids, later we gone rank aight
+        return sorted(results)
+    
+    def search(self, query):
+        pattern = r'\b\w+\b\s+(and|but|or)\s+\b\w+\b' # pattern for boolean query
+        terms = query.lower().split()
+        if not terms:
+            return []
+        
+        if re.findall(pattern, query):
+            return self.boolean_search(query)
+        
+        firstword = terms[0]
+        if firstword not in self.index:
+            return []
+
+        results = []
+        for file, postions in self.index[firstword].items():
+            words = self.documents[file]
+            for pos in postions:
+                if words[pos:pos + len(terms)] == terms:
+                    results.append(file)
+                    break
         return sorted(results)
     
     def vector_search(self, query, top_k=None):
