@@ -120,7 +120,7 @@ class HTMLParser:
         return links
 
     def parse(self, html_content):
-        text = re.sub(r"<[^>]+>", " ", html_content) # tag killer
+        text = re.sub(r"<[^>]+>", " ", html_content, flags=re.IGNORECASE) # tag killer
         words = re.findall(r"\b\w+\b", text.lower()) # split and lowercase
         words = [w for w in words if w not in STOPWORDS] # remove stop-words
         return words
