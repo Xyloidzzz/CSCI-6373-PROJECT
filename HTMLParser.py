@@ -27,7 +27,7 @@ STOPWORDS = {
 }
 
 class HTMLParser:
-    def __init__(self, zip_path="Jan.zip", folder_name="Jan"):
+    def __init__(self, zip_path="rhf.zip", folder_name="rhf"):
         self.zip_path = zip_path
         self.folder_name = folder_name
         self.index = {}
@@ -42,7 +42,7 @@ class HTMLParser:
     def _build_index(self):
         with zipfile.ZipFile(self.zip_path, 'r') as z:
             for file_name in z.namelist():
-                if file_name.startswith(self.folder_name) and file_name.endswith(".html"):
+                if file_name.startswith(self.folder_name) and file_name.endswith(".html") or file_name.endswith(".htm"):
                     with z.open(file_name) as f:
                         html_content = f.read().decode("utf-8", errors="ignore")
                         words = self.parse(html_content)
