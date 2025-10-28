@@ -28,7 +28,7 @@ def home():
     results = None
     if q:
         results = parser.search(q) or []
-    return render_template("index.html", q=q, results=results)
+    return render_template("index.html", q=q, results=results, links=parser.links)
 
 if __name__ == "__main__":
     app.run(debug=True)

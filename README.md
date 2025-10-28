@@ -17,8 +17,9 @@ Search Engine Website precursor that indexes HTML files from a ZIP archive and a
 
 1. Ensure you have Python installed on your machine.
 2. Install required packages: `pip install -r requirements.txt`
-3. Run the script: `python main.py`
-4. Enter search terms when prompted to find relevant HTML file names.
+3. Extract all files from rhf.zip into static folder
+4. Run the script: `python main.py`
+5. Enter search terms when prompted to find relevant HTML file names.
 
 Your search engine will be accessible at: `http://localhost:5000/`
 

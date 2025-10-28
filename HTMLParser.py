@@ -42,21 +42,29 @@ class HTMLParser:
     def _build_index(self):
         with zipfile.ZipFile(self.zip_path, 'r') as z:
             for file_name in z.namelist():
-                if file_name.startswith(self.folder_name) and file_name.endswith(".html") or file_name.endswith(".htm"):
+                if file_name.startswith(self.folder_name) and (file_name.endswith(".html") or file_name.endswith(".htm")):
                     with z.open(file_name) as f:
                         html_content = f.read().decode("utf-8", errors="ignore")
                         words = self.parse(html_content)
-                        base_name = os.path.basename(file_name)
-                        self.doc_stats[base_name] = {'length': len(words)}
-                        self.documents[base_name] = words
-                        self.links[base_name] = self._extract_links(html_content)
+
+                        rel_path = file_name
+                        prefix = self.folder_name.rstrip('/') + '/'
+                        if rel_path.startswith(prefix):
+                            rel_path = rel_path[len(prefix):]
+                        rel_path = rel_path.replace('\\', '/').lstrip('./').lstrip('/')
+
+                        rel_path = rel_path.replace('\\', '/').lstrip('./').lstrip('/')
+                        doc_id = os.path.basename(rel_path)  # for display/search
+                        self.documents[doc_id] = words
+                        self.doc_stats[doc_id] = {'length': len(words)}
+                        self.links[doc_id] = rel_path  # full path for the actual link
 
                         for pos, word in enumerate(words):
                             if word not in self.index:
                                 self.index[word] = {}
-                            if base_name not in self.index[word]:
-                                self.index[word][base_name] = []
-                            self.index[word][base_name].append(pos)
+                            if doc_id not in self.index[word]:
+                                self.index[word][doc_id] = []
+                            self.index[word][doc_id].append(pos)
 
     def _build_inverted_index(self):
         """
