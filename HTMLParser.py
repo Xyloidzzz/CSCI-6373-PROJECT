@@ -181,7 +181,65 @@ class HTMLParser:
         return sorted(results)
     
     def phrase_search(self, phrase):
-        return [] # TODO: implement phrase search
+        terms = self._tokenize_query(phrase)
+
+        if not terms:
+           return []
+
+        if len(terms) == 1:
+            return sorted(self.get_doc_names(terms[0]))
+
+        # find common documents containing all terms
+        docs = None
+        for term in terms:
+            term_docs = self.get_doc_names(term)
+            if not term_docs:
+                return []
+            
+            if docs is None:
+                docs = term_docs
+            else:
+                docs &= term_docs
+
+        if not docs:
+            return []
+        
+        m_docs = []
+
+        for d_name in docs:
+            if self.hasConTerms(d_name,terms):
+                m_docs.append(d_name)
+        
+        return sorted(m_docs)
+
+    def hasConTerms(self, d_name, terms):
+        f_term = terms[0]
+        f_term_entry = self.inverted_index.get(f_term)
+        if not f_term_entry or d_name not in f_term_entry['docs']:
+            return False
+
+        f_pos = f_term_entry['docs'][d_name]['positions']
+
+        # Check positions of first term and see if subsequent terms appear in consecutive positions
+        for start in f_pos:
+            found = True
+
+            for i, term in enumerate(terms[1:], 1):
+                exp_pos = start + i
+                term_entry = self.inverted_index.get(term)
+
+                if not term_entry or d_name not in term_entry['docs']:
+                    found = False
+                    break
+
+                term_positions = term_entry['docs'][d_name]['positions']
+
+                if exp_pos not in term_positions:
+                    found = False
+                    break
+            if found:
+                return True
+        return False
     
     def vector_search(self, query, top_k=None):
         # tokenize query
