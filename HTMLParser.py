@@ -19,6 +19,9 @@ import zipfile
 import os
 import re
 import math
+from collections import deque
+import posixpath
+from pathlib import PurePosixPath
 
 STOPWORDS = {
     'a','an','and','are','as','at','be','but','by','for','if','in','into','is','it',
@@ -35,7 +38,8 @@ class HTMLParser:
         self.documents = {}
         self.doc_stats = {}
         self.links = {}
-        self._build_index()
+        self._build_index_from_crawl()
+        # self._build_index()
         self.num_docs = len(self.documents)
         self._build_inverted_index()
 
@@ -45,8 +49,47 @@ class HTMLParser:
                 if file_name.startswith(self.folder_name) and (file_name.endswith(".html") or file_name.endswith(".htm")):
                     with z.open(file_name) as f:
                         html_content = f.read().decode("utf-8", errors="ignore")
-                        words = self.parse(html_content)
+                    words = self.parse(html_content)
 
+                    rel_path = file_name
+                    prefix = self.folder_name.rstrip('/') + '/'
+                    if rel_path.startswith(prefix):
+                        rel_path = rel_path[len(prefix):]
+                    rel_path = rel_path.replace('\\', '/').lstrip('./').lstrip('/')
+
+                    rel_path = rel_path.replace('\\', '/').lstrip('./').lstrip('/')
+                    doc_id = os.path.basename(rel_path)  # for display/search
+                    self.documents[doc_id] = words
+                    self.doc_stats[doc_id] = {'length': len(words)}
+                    self.links[doc_id] = rel_path  # full path for the actual link
+
+                    for pos, word in enumerate(words):
+                        if word not in self.index:
+                            self.index[word] = {}
+                        if doc_id not in self.index[word]:
+                            self.index[word][doc_id] = []
+                        self.index[word][doc_id].append(pos)
+
+    def _build_index_from_crawl(self):
+        path = self.folder_name + '/'
+        start =  path + 'index.html'
+        queue = deque([start])
+        seen = set()
+        with zipfile.ZipFile(self.zip_path, 'r') as z:
+            while queue:
+                file_name = queue.popleft()
+                if file_name in seen:
+                    continue
+                seen.add(file_name)
+                if file_name.startswith(self.folder_name) and (file_name.endswith(".html") or file_name.endswith(".htm")):
+                        with z.open(file_name) as f:
+                            html_content = f.read().decode("utf-8", errors="ignore")
+                        links = self._extract_links(html_content)
+                        path = posixpath.dirname(file_name) + '/'
+                        for l in links:
+                            queue.append( self._clean_path(path + l))
+
+                        words = self.parse(html_content)
                         rel_path = file_name
                         prefix = self.folder_name.rstrip('/') + '/'
                         if rel_path.startswith(prefix):
@@ -65,6 +108,7 @@ class HTMLParser:
                             if doc_id not in self.index[word]:
                                 self.index[word][doc_id] = []
                             self.index[word][doc_id].append(pos)
+        print(f'DONE: files scanned {len(seen)}')
 
     def _build_inverted_index(self):
         """
@@ -137,6 +181,16 @@ class HTMLParser:
         # split, lowercase, and remove stop-words
         tokens = re.findall(r"\b\w+\b", text.lower())
         return [t for t in tokens if t not in STOPWORDS]
+
+    def _clean_path(self, path):
+        parts = []
+        for part in PurePosixPath(path).parts:
+            if part == "..":
+                if parts:
+                    parts.pop()
+            elif part != ".":
+                parts.append(part)
+        return "/".join(parts)
 
     def parse(self, html_content):
         text = re.sub(r"<[^>]+>", " ", html_content, flags=re.IGNORECASE) # tag killer
