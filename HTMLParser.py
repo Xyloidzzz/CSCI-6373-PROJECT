@@ -38,6 +38,8 @@ class HTMLParser:
         self.documents = {}
         self.doc_stats = {}
         self.links = {}
+        self.titles = {}
+        self.snippets = {}
         self._build_index_from_crawl()
         # self._build_index()
         self.num_docs = len(self.documents)
@@ -62,6 +64,13 @@ class HTMLParser:
                     self.documents[doc_id] = words
                     self.doc_stats[doc_id] = {'length': len(words)}
                     self.links[doc_id] = rel_path  # full path for the actual link
+                    
+                    # Extract and store title/anchor text
+                    title = self._extract_title(html_content)
+                    self.titles[doc_id] = title if title else doc_id
+                    # Extract and store a short snippet for display
+                    snippet = self._extract_snippet(html_content)
+                    self.snippets[doc_id] = snippet if snippet else ''
 
                     for pos, word in enumerate(words):
                         if word not in self.index:
@@ -101,6 +110,13 @@ class HTMLParser:
                         self.documents[doc_id] = words
                         self.doc_stats[doc_id] = {'length': len(words)}
                         self.links[doc_id] = rel_path  # full path for the actual link
+                        
+                        # Extract and store title/anchor text
+                        title = self._extract_title(html_content)
+                        self.titles[doc_id] = title if title else doc_id
+                        # Extract and store a short snippet for display
+                        snippet = self._extract_snippet(html_content)
+                        self.snippets[doc_id] = snippet if snippet else ''  
 
                         for pos, word in enumerate(words):
                             if word not in self.index:
@@ -168,6 +184,66 @@ class HTMLParser:
         # returns a list of urls in html
         links = re.findall(r'href\s*=\s*["\']([^"\']+)["\']', html_content, flags=re.IGNORECASE)
         return links
+    
+    def _extract_title(self, html_content):
+        # Extract title from HTML content
+        # First try to get <title> tag
+        title_match = re.search(r'<title[^>]*>(.*?)</title>', html_content, flags=re.IGNORECASE | re.DOTALL)
+        if title_match:
+            title = title_match.group(1).strip()
+            # Remove HTML tags from title if any
+            title = re.sub(r'<[^>]+>', '', title).strip()
+            # Remove [rec.humor.funny] or similar bracketed text anywhere in the title
+            title = re.sub(r'\s*\[[\w\.]+\]', '', title).strip()
+            if title:
+                return title
+        
+        # Fallback to first <h1> tag
+        h1_match = re.search(r'<h1[^>]*>(.*?)</h1>', html_content, flags=re.IGNORECASE | re.DOTALL)
+        if h1_match:
+            h1_text = h1_match.group(1).strip()
+            h1_text = re.sub(r'<[^>]+>', '', h1_text).strip()
+            # Remove [rec.humor.funny] or similar bracketed text anywhere in the title
+            h1_text = re.sub(r'\s*\[[\w\.]+\]', '', h1_text).strip()
+            if h1_text:
+                return h1_text
+        
+        # If no title or h1, return None
+        return None
+
+    def _extract_snippet(self, html_content, maxlen=160):
+        if not html_content:
+            return ''
+        m = re.search(r'<meta\s+name=["\']description["\']\s+content=["\'](.*?)["\']', html_content, flags=re.IGNORECASE | re.DOTALL)
+        if m:
+            desc = m.group(1).strip()
+        else:
+            p = re.search(r'<p[^>]*>(.*?)</p>', html_content, flags=re.IGNORECASE | re.DOTALL)
+            if p:
+                desc = re.sub(r'<[^>]+>', '', p.group(1)).strip()
+            else:
+                body = re.sub(r'<(script|style)[^>]*>.*?</\1>', ' ', html_content, flags=re.IGNORECASE | re.DOTALL)
+                text = re.sub(r'<[^>]+>', ' ', body)
+                text = re.sub(r'\s+', ' ', text).strip()
+                title = self._extract_title(html_content) or ''
+                if title and title in text:
+                    text = text.replace(title, '')
+                desc = text
+        desc = re.sub(r'\s*\[[\w\.\- ]+\]\s*', ' ', desc).strip()
+        desc = re.sub(r'\s+', ' ', desc)
+
+        if not desc:
+            return ''
+
+        if len(desc) <= maxlen:
+            return desc
+        end = desc.rfind('.', 0, maxlen)
+        if end != -1 and end >= int(maxlen*0.5):
+            return desc[:end+1].strip()
+        cut = desc.rfind(' ', 0, maxlen)
+        if cut == -1:
+            return desc[:maxlen].strip() + '...'
+        return desc[:cut].strip() + '...'
     
     def _idf(self, term):
         # compute idf using df from inverted index and num_docs

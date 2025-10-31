@@ -70,12 +70,16 @@
           {% for doc in results %}
           <li>
             <a
-              href="{{ url_for('static', filename='rhf/' ~ links[doc]) }}"
+              href="{{ url_for('serve_doc', filepath=links[doc]) }}"
               target="_blank"
               rel="noopener noreferrer"
-              style="color: inherit; text-decoration: none"
+              style="color: inherit; text-decoration: none; display: block"
             >
-              {{ doc }}
+              <div style="color: #1a73e8; font-size: 13px">{{ links[doc] }}</div>
+              <div style="margin-top: 6px; font-size: 15px; font-weight: 600">{{ titles[doc] }}</div>
+              {% if snippets[doc] %}
+              <div style="margin-top: 6px; color: #5f6368; font-size: 13px">{{ snippets[doc] }}</div>
+              {% endif %}
             </a>
           </li>
           {% endfor %}
