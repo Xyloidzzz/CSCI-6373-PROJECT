@@ -63,7 +63,7 @@
       {% if results is not none %}
       <section class="results">
         {% if reformulation and reformulation.has_expansion %}
-        <div style="background: #e8f4fd; padding: 12px; margin-bottom: 16px; border-radius: 4px; border-left: 4px solid #1967d2;">
+        <div style="background: #000000; padding: 12px; margin-bottom: 16px; border-radius: 4px; border-left: 4px solid #1967d2;">
           <div style="font-weight: 600; margin-bottom: 8px;">Query expanded with: <span style="color: #1967d2;">{{ reformulation.expansion_terms|join(', ') }}</span></div>
           <div style="font-size: 13px; color: #5f6368;">
             <span style="color: #1967d2; font-weight: 600;">●</span> Original results
