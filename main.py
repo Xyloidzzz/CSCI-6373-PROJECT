@@ -16,10 +16,13 @@
 #####################################################
 
 from flask import Flask, render_template, request, send_file
+import os
+from dotenv import load_dotenv
 from HTMLParser import HTMLParser
 import zipfile
 from io import BytesIO
 
+load_dotenv()
 parser = HTMLParser()
 
 app = Flask(__name__)
@@ -74,4 +77,4 @@ def serve_doc(filepath):
         return f"Error: {str(e)}", 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("DEBUG"))
