@@ -40,6 +40,7 @@ class HTMLParser:
         self.links = {}
         self.titles = {}
         self.snippets = {}
+        self.doc_keywords = {}
         self._build_index_from_crawl()
         # self._build_index()
         self.num_docs = len(self.documents)
