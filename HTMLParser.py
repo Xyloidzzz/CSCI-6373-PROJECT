@@ -287,6 +287,85 @@ class HTMLParser:
 
         return [term for term, _ in keyword_correlations[:top_n]]
 
+    def query_reformulation_search(self, query):
+        """
+            query reformulation using pseudo relevance feedback
+            returns dict with original results, reformulated results, and metadata
+        """
+        # initial search with original query
+        S = self.vector_search(query)
+
+        if not S or len(S) < 2:
+            # not enough results for reformulation
+            return {
+                'original_results': S if S else [],
+                'reformulated_results': [],
+                'merged_results': S if S else [],
+                'reformulated_query': query,
+                'expansion_terms': []
+            }
+
+        # select top documents for analysis
+        top_docs = S[:QR_TOP_DOCS]
+
+        # extract keywords from top documents
+        query_terms = self._tokenize_query(query)
+        candidate_keywords = self.extract_keywords_from_docs(top_docs)
+
+        if not candidate_keywords:
+            # no keywords extracted = return original results
+            return {
+                'original_results': S,
+                'reformulated_results': [],
+                'merged_results': S,
+                'reformulated_query': query,
+                'expansion_terms': []
+            }
+
+        # find keywords most correlated with query terms
+        expansion_terms = self.find_correlated_keywords(query_terms, candidate_keywords)
+
+        if not expansion_terms:
+            # no expansion terms found = return original results
+            return {
+                'original_results': S,
+                'reformulated_results': [],
+                'merged_results': S,
+                'reformulated_query': query,
+                'expansion_terms': []
+            }
+
+        # reformulate query with expansion terms
+        reformulated_query = query + " " + " ".join(expansion_terms)
+
+        # search with reformulated query
+        S_prime = self.vector_search(reformulated_query)
+
+        # merge results preserving order
+        # combine S and S_prime removing duplicates
+        seen = set()
+        merged = []
+
+        # add all results from S first
+        for doc in S:
+            if doc not in seen:
+                merged.append(doc)
+                seen.add(doc)
+
+        # add new results from S_prime
+        for doc in S_prime:
+            if doc not in seen:
+                merged.append(doc)
+                seen.add(doc)
+
+        return {
+            'original_results': S,
+            'reformulated_results': S_prime,
+            'merged_results': merged,
+            'reformulated_query': reformulated_query,
+            'expansion_terms': expansion_terms
+        }
+
     def _extract_links(self, html_content):
         # returns a list of urls in html
         links = re.findall(r'href\s*=\s*["\']([^"\']+)["\']', html_content, flags=re.IGNORECASE)
