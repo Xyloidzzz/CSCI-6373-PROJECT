@@ -260,6 +260,33 @@ class HTMLParser:
 
         return avg_scores[:top_k]
 
+    def find_correlated_keywords(self, query_terms, candidate_keywords, top_n = QR_EXPANSION_TERMS):
+        """
+            find the keywords most correlated with query terms
+            compute average correlation of each with all query terms
+            return top n  terms by correlation score
+        """
+        keyword_correlations = []
+
+        for candidate_term, _ in candidate_keywords:
+            if candidate_term in query_terms:
+                continue
+
+            # compute correlation with each query term
+            correlations = []
+            for query_term in query_terms:
+                corr = self.compute_term_correlation(query_term, candidate_term)
+                correlations.append(corr)
+
+            if correlations:
+                avg_corr = sum(correlations) / len(correlations)
+                keyword_correlations.append((candidate_term, avg_corr))
+
+        # sort by correlation descending
+        keyword_correlations.sort(key=lambda x: -x[1])
+
+        return [term for term, _ in keyword_correlations[:top_n]]
+
     def _extract_links(self, html_content):
         # returns a list of urls in html
         links = re.findall(r'href\s*=\s*["\']([^"\']+)["\']', html_content, flags=re.IGNORECASE)
