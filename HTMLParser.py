@@ -6,7 +6,7 @@
 # Fall 2025
 #
 # Created: 2025-09-04
-# Last Edited: 2025-10-09
+# Last Edited: 2025-11-15
 #
 # Authors:
 #   - Ariana Gutierrez
@@ -179,7 +179,11 @@ class HTMLParser:
         for word_entry in self.inverted_index.values():
             for doc_name, posting in word_entry['docs'].items():
                 posting['norm_tfidf'] = posting['tfidf'] / doc_norm[doc_name]
-                
+
+        # sort posting lists by document id for doc correlation computation later
+        for word_entry in self.inverted_index.values():
+            word_entry['docs'] = dict(sorted(word_entry['docs'].items()))
+
     def _extract_links(self, html_content):
         # returns a list of urls in html
         links = re.findall(r'href\s*=\s*["\']([^"\']+)["\']', html_content, flags=re.IGNORECASE)
