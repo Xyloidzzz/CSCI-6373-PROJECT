@@ -6,7 +6,7 @@
 # Fall 2025
 #
 # Created: 2025-09-04
-# Last Edited: 2025-10-09
+# Last Edited: 2025-11-15
 #
 # Authors:
 #   - Ariana Gutierrez
@@ -28,9 +28,33 @@ app = Flask(__name__)
 def home():
     q = (request.args.get("q") or "").strip()
     results = None
+    reformulation_info = None
+
     if q:
-        results = parser.search(q) or []
-    return render_template("index.html", q=q, results=results, links=parser.links, titles=parser.titles, snippets=parser.snippets)
+        search_result = parser.search(q)
+
+        # check if result is from query reformulation
+        if isinstance(search_result, dict):
+            results = search_result['merged_results']
+            reformulation_info = {
+                'original': set(search_result['original_results']),
+                'reformulated_query': search_result['reformulated_query'],
+                'expansion_terms': search_result['expansion_terms'],
+                'has_expansion': len(search_result['expansion_terms']) > 0
+            }
+        else:
+            # boolean or phrase search returns simple list
+            results = search_result or []
+
+    return render_template(
+        "index.html",
+        q=q,
+        results=results,
+        links=parser.links,
+        titles=parser.titles,
+        snippets=parser.snippets,
+        reformulation=reformulation_info
+    )
 
 @app.route("/doc/<path:filepath>")
 def serve_doc(filepath):
