@@ -29,6 +29,11 @@ STOPWORDS = {
     'this','to','was','will','with','from','we','you','your','i','our','us'
 }
 
+# query reformulation parameters
+QR_TOP_DOCS = 5
+QR_CANDIDATE_KEYWORDS = 20
+QR_EXPANSION_TERMS = 5
+
 class HTMLParser:
     def __init__(self, zip_path="rhf.zip", folder_name="rhf"):
         self.zip_path = zip_path
@@ -200,6 +205,31 @@ class HTMLParser:
         # sort each doc's keywords by tfidf descending
         for doc_id in self.doc_keywords:
             self.doc_keywords[doc_id].sort(key=lambda x: -x[1])
+
+    def compute_term_correlation(self, term1, term2):
+        """
+            compute correlation between two terms using their normalized tfidf values
+            go through posting lists in parallel and sum products for common documents
+        """
+        entry1 = self.inverted_index.get(term1)
+        entry2 = self.inverted_index.get(term2)
+
+        if not entry1 or not entry2:
+            return 0.0
+
+        docs1 = entry1['docs']
+        docs2 = entry2['docs']
+
+        # find common documents and sum tfidf products
+        common_docs = set(docs1.keys()) & set(docs2.keys())
+
+        correlation = 0.0
+        for doc_id in common_docs:
+            tfidf1 = docs1[doc_id]['norm_tfidf']
+            tfidf2 = docs2[doc_id]['norm_tfidf']
+            correlation += tfidf1 * tfidf2
+
+        return correlation
 
     def _extract_links(self, html_content):
         # returns a list of urls in html
