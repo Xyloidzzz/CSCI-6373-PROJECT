@@ -231,6 +231,35 @@ class HTMLParser:
 
         return correlation
 
+    def extract_keywords_from_docs(self, doc_ids, top_k = QR_CANDIDATE_KEYWORDS):
+        """
+            extract top keywords from a list of documents
+            aggregate tfidf scores across docs and return top k by average score
+        """
+        term_scores = {}
+
+        for doc_id in doc_ids:
+            if doc_id not in self.doc_keywords:
+                continue
+
+            for term, tfidf in self.doc_keywords[doc_id]:
+                if term in STOPWORDS:
+                    continue
+
+                if term not in term_scores:
+                    term_scores[term] = []
+                term_scores[term].append(tfidf)
+
+        # compute average tfidf across documents
+        avg_scores = []
+        for term, scores in term_scores.items():
+            avg_scores.append((term, sum(scores) / len(scores)))
+
+        # sort by average score descending
+        avg_scores.sort(key = lambda x: -x[1])
+
+        return avg_scores[:top_k]
+
     def _extract_links(self, html_content):
         # returns a list of urls in html
         links = re.findall(r'href\s*=\s*["\']([^"\']+)["\']', html_content, flags=re.IGNORECASE)
