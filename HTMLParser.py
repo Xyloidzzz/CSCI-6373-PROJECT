@@ -45,6 +45,7 @@ class HTMLParser:
         # self._build_index()
         self.num_docs = len(self.documents)
         self._build_inverted_index()
+        self._build_doc_keywords()
 
     def _build_index(self):
         with zipfile.ZipFile(self.zip_path, 'r') as z:
@@ -184,6 +185,21 @@ class HTMLParser:
         # sort posting lists by document id for doc correlation computation later
         for word_entry in self.inverted_index.values():
             word_entry['docs'] = dict(sorted(word_entry['docs'].items()))
+
+    def _build_doc_keywords(self):
+        """
+            for each document create sorted list of term tfidf pairs then populate doc_keywords
+        """
+        for doc_id in self.documents:
+            self.doc_keywords[doc_id] = []
+
+        for word, word_entry in self.inverted_index.items():
+            for doc_id, posting in word_entry['docs'].items():
+                self.doc_keywords[doc_id].append((word, posting['norm_tfidf']))
+
+        # sort each doc's keywords by tfidf descending
+        for doc_id in self.doc_keywords:
+            self.doc_keywords[doc_id].sort(key=lambda x: -x[1])
 
     def _extract_links(self, html_content):
         # returns a list of urls in html
