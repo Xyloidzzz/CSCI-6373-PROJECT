@@ -484,10 +484,10 @@ class HTMLParser:
         m = re.search(r'"([^"]+)"', q)
         if m:
             phrase = m.group(1)
-            return self.phrase_search(phrase) # TODO: implement phrase search
+            return self.phrase_search(phrase)
 
-        # DEFAULT BEHAVIOR -> vector-space ranking
-        return self.vector_search(q)
+        # DEFAULT BEHAVIOR -> vector search with query reformulation
+        return self.query_reformulation_search(q)
 
     def boolean_search(self, query):
         words = re.split(r'\s+(and|or|but)\s+', query.lower())
