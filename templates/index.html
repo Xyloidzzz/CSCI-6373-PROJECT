@@ -99,6 +99,24 @@
           </li>
           {% endfor %}
         </ul>
+
+        {# >>> SIDE-BY-SIDE COMPARISON GOES HERE <<< #}
+        {% if comparison_rows %}
+        <h2 style="margin-top: 24px;">Original vs Merged Results</h2>
+        <table border="1" cellpadding="6" cellspacing="0">
+          <tr>
+            <th>Original Results</th>
+            <th>Merged Results</th>
+          </tr>
+          {% for old, new in comparison_rows %}
+          <tr>
+            <td>{{ old }}</td>
+            <td>{{ new }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        {% endif %}
+
         {% else %}
         <div class="no-match">No Match...</div>
         {% endif %}
