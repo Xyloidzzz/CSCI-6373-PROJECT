@@ -6,7 +6,7 @@
   Fall 2025
 
   Created: 2025-10-09
-  Last Edited: 2025-10-09
+  Last Edited: 2025-11-21
 
   Authors:
     - Ariana Gutierrez
@@ -63,6 +63,7 @@
       {% if results is not none %}
       <section class="results">
         {% if reformulation and reformulation.has_expansion %}
+        <!-- Query expansion info banner -->
         <div style="background: #000000; padding: 12px; margin-bottom: 16px; border-radius: 4px; border-left: 4px solid #1967d2;">
           <div style="font-weight: 600; margin-bottom: 8px;">Query expanded with: <span style="color: #1967d2;">{{ reformulation.expansion_terms|join(', ') }}</span></div>
           <div style="font-size: 13px; color: #5f6368;">
@@ -71,16 +72,82 @@
             <span style="color: #188038; font-weight: 600;">●</span> Expanded results
           </div>
         </div>
+
+        {% if results %}
+        <div class="result-count">
+          {{ results|length }} result{{ '' if results|length == 1 else 's' }} total
+        </div>
+
+        <!-- Two-column layout for reformulation results -->
+        <div class="results-columns">
+          <!-- Original Results Column -->
+          <div class="results-column">
+            <h3 class="column-header" style="color: #1967d2;">Original Results ({{ reformulation.original_list|length }})</h3>
+            <ul>
+              {% for doc in reformulation.original_list %}
+              <li>
+                <a
+                  href="{{ url_for('serve_doc', filepath=links[doc]) }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="color: inherit; text-decoration: none; display: block"
+                >
+                  <div style="color: #1a73e8; font-size: 13px">{{ links[doc] }}</div>
+                  <div style="margin-top: 6px; font-size: 15px; font-weight: 600; color: #1967d2;">
+                    {{ titles[doc] }}
+                  </div>
+                  {% if snippets[doc] %}
+                  <div style="margin-top: 6px; color: #5f6368; font-size: 13px">{{ snippets[doc] }}</div>
+                  {% endif %}
+                </a>
+              </li>
+              {% endfor %}
+              {% if not reformulation.original_list %}
+              <li style="color: var(--muted); font-style: italic;">No original results</li>
+              {% endif %}
+            </ul>
+          </div>
+
+          <!-- Expanded Results Column -->
+          <div class="results-column">
+            <h3 class="column-header" style="color: #188038;">Expanded Results ({{ reformulation.expanded|length }})</h3>
+            <ul>
+              {% for doc in reformulation.expanded %}
+              <li>
+                <a
+                  href="{{ url_for('serve_doc', filepath=links[doc]) }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="color: inherit; text-decoration: none; display: block"
+                >
+                  <div style="color: #1a73e8; font-size: 13px">{{ links[doc] }}</div>
+                  <div style="margin-top: 6px; font-size: 15px; font-weight: 600; color: #188038;">
+                    {{ titles[doc] }}
+                  </div>
+                  {% if snippets[doc] %}
+                  <div style="margin-top: 6px; color: #5f6368; font-size: 13px">{{ snippets[doc] }}</div>
+                  {% endif %}
+                </a>
+              </li>
+              {% endfor %}
+              {% if not reformulation.expanded %}
+              <li style="color: var(--muted); font-style: italic;">No additional expanded results</li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+        {% else %}
+        <div class="no-match">No Match...</div>
         {% endif %}
 
+        {% else %}
+        <!-- Non-reformulation results (boolean/phrase search) -->
         {% if results %}
         <div class="result-count">
           {{ results|length }} result{{ '' if results|length == 1 else 's' }}
         </div>
         <ul>
           {% for doc in results %}
-          {% set is_original = reformulation and doc in reformulation.original %}
-          {% set is_expanded = reformulation and reformulation.has_expansion and doc not in reformulation.original %}
           <li>
             <a
               href="{{ url_for('serve_doc', filepath=links[doc]) }}"
@@ -89,7 +156,7 @@
               style="color: inherit; text-decoration: none; display: block"
             >
               <div style="color: #1a73e8; font-size: 13px">{{ links[doc] }}</div>
-              <div style="margin-top: 6px; font-size: 15px; font-weight: 600; {% if is_original %}color: #1967d2;{% elif is_expanded %}color: #188038;{% endif %}">
+              <div style="margin-top: 6px; font-size: 15px; font-weight: 600;">
                 {{ titles[doc] }}
               </div>
               {% if snippets[doc] %}
@@ -99,26 +166,9 @@
           </li>
           {% endfor %}
         </ul>
-
-        {# >>> SIDE-BY-SIDE COMPARISON GOES HERE <<< #}
-        {% if comparison_rows %}
-        <h2 style="margin-top: 24px;">Original vs Merged Results</h2>
-        <table border="1" cellpadding="6" cellspacing="0">
-          <tr>
-            <th>Original Results</th>
-            <th>Merged Results</th>
-          </tr>
-          {% for old, new in comparison_rows %}
-          <tr>
-            <td>{{ old }}</td>
-            <td>{{ new }}</td>
-          </tr>
-          {% endfor %}
-        </table>
-        {% endif %}
-
         {% else %}
         <div class="no-match">No Match...</div>
+        {% endif %}
         {% endif %}
       </section>
       {% endif %}
