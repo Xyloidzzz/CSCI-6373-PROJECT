@@ -30,14 +30,29 @@ app = Flask(__name__)
 @app.route("/", methods=["GET"])
 def home():
     q = (request.args.get("q") or "").strip()
+    mode = request.args.get("mode") or "reformulation"  # default to reformulation
     results = None
     reformulation_info = None
+    recommendation_info = None
 
     if q:
-        search_result = parser.search(q)
+        search_result = parser.search(q, mode=mode)
 
+        # check if result is from content-based recommendation
+        if isinstance(search_result, dict) and 'recommended_results' in search_result:
+            results = search_result['merged_results']
+            recommendation_info = {
+                'original': set(search_result['original_results']),
+                'recommended': set(search_result['recommended_results']),
+                'original_list': search_result['original_results'],
+                'recommended_list': search_result['recommended_results'],
+                'has_recommendations': len(search_result['recommended_results']) > 0,
+                'query_terms': search_result.get('query_terms', []),
+                'top_docs_used': search_result.get('top_docs_used', []),
+                'recommendation_reasons': search_result.get('recommendation_reasons', {})
+            }
         # check if result is from query reformulation
-        if isinstance(search_result, dict):
+        elif isinstance(search_result, dict):
             results = search_result['merged_results']
             reformulation_info = {
                 'original': set(search_result['original_results']),
@@ -54,11 +69,13 @@ def home():
     return render_template(
         "index.html",
         q=q,
+        mode=mode,
         results=results,
         links=parser.links,
         titles=parser.titles,
         snippets=parser.snippets,
-        reformulation=reformulation_info
+        reformulation=reformulation_info,
+        recommendation=recommendation_info
     )
 
 @app.route("/doc/<path:filepath>")
