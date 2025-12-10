@@ -34,6 +34,11 @@ QR_TOP_DOCS = 5
 QR_CANDIDATE_KEYWORDS = 20
 QR_EXPANSION_TERMS = 5
 
+# content-based recommendation parameters
+CBR_TOP_DOCS = 5  # number of top docs from S to use for finding correlations
+CBR_CORRELATION_THRESHOLD = 0.1  # minimum correlation value to include in correlation list
+CBR_MAX_CORRELATED_DOCS = 10  # max correlated docs to return per document
+
 class HTMLParser:
     def __init__(self, zip_path="rhf.zip", folder_name="rhf"):
         self.zip_path = zip_path
@@ -46,11 +51,13 @@ class HTMLParser:
         self.titles = {}
         self.snippets = {}
         self.doc_keywords = {}
+        self.doc_correlation = {}  # document correlation list
         self._build_index_from_crawl()
         # self._build_index()
         self.num_docs = len(self.documents)
         self._build_inverted_index()
         self._build_doc_keywords()
+        self._build_doc_correlation_list()
 
     def _build_index(self):
         with zipfile.ZipFile(self.zip_path, 'r') as z:
@@ -206,6 +213,73 @@ class HTMLParser:
         for doc_id in self.doc_keywords:
             self.doc_keywords[doc_id].sort(key=lambda x: -x[1])
 
+    def compute_doc_correlation(self, doc1_id, doc2_id):
+        """
+            compute correlation between two documents using their normalized tfidf vectors
+            correlation = sum of (w_t,d1 * w_t,d2) for all terms t
+            this is the dot product of normalized vectors (cosine similarity)
+        """
+        if doc1_id not in self.documents or doc2_id not in self.documents:
+            return 0.0
+
+        # get all terms in both documents
+        terms1 = {}
+        terms2 = {}
+
+        for term, tfidf in self.doc_keywords.get(doc1_id, []):
+            terms1[term] = tfidf
+
+        for term, tfidf in self.doc_keywords.get(doc2_id, []):
+            terms2[term] = tfidf
+
+        # compute dot product for common terms
+        common_terms = set(terms1.keys()) & set(terms2.keys())
+        
+        correlation = 0.0
+        for term in common_terms:
+            correlation += terms1[term] * terms2[term]
+
+        return correlation
+
+    def _build_doc_correlation_list(self):
+        """
+            build document correlation list for all document pairs
+            store only correlations above threshold to save space
+            doc_correlation: {
+                doc_id: [(correlated_doc_id, correlation_score), ...]
+            }
+        """
+        print("Building document correlation list...")
+        doc_list = list(self.documents.keys())
+        
+        for i, doc1 in enumerate(doc_list):
+            if i % 100 == 0:
+                print(f"  Processing document {i}/{len(doc_list)}")
+            
+            self.doc_correlation[doc1] = []
+            
+            for j, doc2 in enumerate(doc_list):
+                if i >= j:  # skip self and already computed pairs
+                    continue
+                
+                correlation = self.compute_doc_correlation(doc1, doc2)
+                
+                if correlation >= CBR_CORRELATION_THRESHOLD:
+                    # add to both documents' correlation lists
+                    self.doc_correlation[doc1].append((doc2, correlation))
+                    
+                    if doc2 not in self.doc_correlation:
+                        self.doc_correlation[doc2] = []
+                    self.doc_correlation[doc2].append((doc1, correlation))
+        
+        # sort each document's correlation list by score descending
+        for doc_id in self.doc_correlation:
+            self.doc_correlation[doc_id].sort(key=lambda x: -x[1])
+            # keep only top N correlated documents
+            self.doc_correlation[doc_id] = self.doc_correlation[doc_id][:CBR_MAX_CORRELATED_DOCS]
+        
+        print(f"Document correlation list built with {len(self.doc_correlation)} documents")
+
     def compute_term_correlation(self, term1, term2):
         """
             compute correlation between two terms using their normalized tfidf values
@@ -286,6 +360,77 @@ class HTMLParser:
         keyword_correlations.sort(key=lambda x: -x[1])
 
         return [term for term, _ in keyword_correlations[:top_n]]
+
+    def content_based_recommendation_search(self, query):
+        """
+            content-based recommendation algorithm:
+            1. use basic search engine to find set S of relevant pages
+            2. select top A documents from S
+            3. find documents correlated to documents in A (set S')
+            4. combine S and S' and display to user
+            
+            returns dict with:
+                - original_results: S (initial search results)
+                - recommended_results: S' (correlated documents)
+                - merged_results: S + S' combined
+                - query_terms: tokenized query terms
+                - top_docs_used: list of top doc IDs used for correlation
+                - recommendation_reasons: dict mapping recommended doc to list of (source_doc, score)
+        """
+        # tokenize query to show search terms
+        query_terms = self._tokenize_query(query)
+        
+        # Step 1: initial search to get set S
+        S = self.vector_search(query)
+        
+        if not S or len(S) < 1:
+            # no results found
+            return {
+                'original_results': [],
+                'recommended_results': [],
+                'merged_results': [],
+                'query_terms': query_terms,
+                'top_docs_used': [],
+                'recommendation_reasons': {}
+            }
+        
+        # Step 2: select top A documents from S
+        A = S[:CBR_TOP_DOCS]
+        
+        # Step 3: find correlated documents
+        S_prime_dict = {}  # use dict to track scores for sorting
+        recommendation_reasons = {}  # track why each doc was recommended
+        
+        for doc_id in A:
+            if doc_id not in self.doc_correlation:
+                continue
+            
+            # get correlated documents for this document
+            for correlated_doc, correlation_score in self.doc_correlation[doc_id]:
+                # only include if not already in S
+                if correlated_doc not in S:
+                    # accumulate correlation scores if doc appears multiple times
+                    if correlated_doc not in S_prime_dict:
+                        S_prime_dict[correlated_doc] = 0.0
+                        recommendation_reasons[correlated_doc] = []
+                    S_prime_dict[correlated_doc] += correlation_score
+                    recommendation_reasons[correlated_doc].append((doc_id, correlation_score))
+        
+        # sort S' by accumulated correlation score descending
+        S_prime = sorted(S_prime_dict.items(), key=lambda x: -x[1])
+        S_prime = [doc for doc, _ in S_prime]
+        
+        # Step 4: combine S and S'
+        merged = S + S_prime
+        
+        return {
+            'original_results': S,
+            'recommended_results': S_prime,
+            'merged_results': merged,
+            'query_terms': query_terms,
+            'top_docs_used': A,
+            'recommendation_reasons': recommendation_reasons
+        }
 
     def query_reformulation_search(self, query):
         """
@@ -471,7 +616,7 @@ class HTMLParser:
             return set()
         return set(entry['docs'].keys())
     
-    def search(self, query):
+    def search(self, query, mode="reformulation"):
         q = query.strip()
         if not q:
             return []
@@ -486,8 +631,11 @@ class HTMLParser:
             phrase = m.group(1)
             return self.phrase_search(phrase)
 
-        # DEFAULT BEHAVIOR -> vector search with query reformulation
-        return self.query_reformulation_search(q)
+        # mode-based search: reformulation or recommendation
+        if mode == "recommendation":
+            return self.content_based_recommendation_search(q)
+        else:
+            return self.query_reformulation_search(q)
 
     def boolean_search(self, query):
         words = re.split(r'\s+(and|or|but)\s+', query.lower())

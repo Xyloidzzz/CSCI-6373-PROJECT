@@ -37,6 +37,7 @@
           value="{{ q }}"
           autocomplete="off"
         />
+        <input type="hidden" name="mode" value="{{ mode or 'reformulation' }}" id="search-mode" />
         <button type="submit" aria-label="search">
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
             <path
@@ -51,6 +52,20 @@
         </button>
       </form>
 
+      <div style="margin: 16px 0; display: flex; gap: 8px; align-items: center;">
+        <span style="font-size: 14px; color: var(--muted);">Search Mode:</span>
+        <button 
+          onclick="document.getElementById('search-mode').value='reformulation'; document.querySelector('form').submit();"
+          style="padding: 6px 12px; border: 1px solid {{ 'var(--accent)' if mode == 'reformulation' or not mode else 'var(--border)' }}; background: {{ 'rgba(14, 165, 233, 0.15)' if mode == 'reformulation' or not mode else 'var(--panel)' }}; color: {{ 'var(--accent)' if mode == 'reformulation' or not mode else 'var(--muted)' }}; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: {{ '600' if mode == 'reformulation' or not mode else '400' }};">
+          Query Reformulation
+        </button>
+        <button 
+          onclick="document.getElementById('search-mode').value='recommendation'; document.querySelector('form').submit();"
+          style="padding: 6px 12px; border: 1px solid {{ '#d93025' if mode == 'recommendation' else 'var(--border)' }}; background: {{ 'rgba(217, 48, 37, 0.15)' if mode == 'recommendation' else 'var(--panel)' }}; color: {{ '#ff6b6b' if mode == 'recommendation' else 'var(--muted)' }}; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: {{ '600' if mode == 'recommendation' else '400' }};">
+          Content-Based Recommendation
+        </button>
+      </div>
+
       <div class="hints">
         <div>Supports:</div>
         <ul>
@@ -62,7 +77,108 @@
 
       {% if results is not none %}
       <section class="results">
-        {% if reformulation and reformulation.has_expansion %}
+        {% if recommendation and recommendation.has_recommendations %}
+        <!-- Content-based recommendation info banner -->
+        <div style="background: var(--panel); padding: 12px; margin-bottom: 16px; border-radius: 4px; border-left: 4px solid #ff6b6b;">
+          <div style="font-weight: 600; margin-bottom: 8px;">Content-Based Recommendations</div>
+          {% if recommendation.query_terms %}
+          <div style="font-size: 13px; color: var(--muted); margin-bottom: 8px;">
+            Searching for: <span style="color: var(--accent); font-weight: 600;">{{ recommendation.query_terms|join(', ') }}</span>
+          </div>
+          {% endif %}
+          {% if recommendation.top_docs_used %}
+          <div style="font-size: 13px; color: var(--muted); margin-bottom: 8px;">
+            Recommendations based on similarity to top {{ recommendation.top_docs_used|length }} result{{ 's' if recommendation.top_docs_used|length > 1 else '' }}:
+            <span style="color: #ff6b6b; font-weight: 600;">
+              {% for doc in recommendation.top_docs_used %}
+                {{ titles[doc] if doc in titles else doc }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </span>
+          </div>
+          {% endif %}
+          <div style="font-size: 13px; color: var(--muted);">
+            <span style="color: #ff6b6b; font-weight: 600;">●</span> Original search results (S)
+            &nbsp;&nbsp;&nbsp;
+            <span style="color: #ffa07a; font-weight: 600;">●</span> Recommended documents (S')
+          </div>
+        </div>
+
+        {% if results %}
+        <div class="result-count">
+          {{ results|length }} result{{ '' if results|length == 1 else 's' }} total
+        </div>
+
+        <!-- Two-column layout for recommendation results -->
+        <div class="results-columns">
+          <!-- Original Results Column (S) -->
+          <div class="results-column">
+            <h3 class="column-header" style="color: #d93025;">Original Results - S ({{ recommendation.original_list|length }})</h3>
+            <ul>
+              {% for doc in recommendation.original_list %}
+              <li>
+                <a
+                  href="{{ url_for('serve_doc', filepath=links[doc]) }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="color: inherit; text-decoration: none; display: block"
+                >
+                  <div style="color: #1a73e8; font-size: 13px">{{ links[doc] }}</div>
+                  <div style="margin-top: 6px; font-size: 15px; font-weight: 600; color: #ff6b6b;">
+                    {{ titles[doc] }}
+                  </div>
+                  {% if snippets[doc] %}
+                  <div style="margin-top: 6px; color: #5f6368; font-size: 13px">{{ snippets[doc] }}</div>
+                  {% endif %}
+                </a>
+              </li>
+              {% endfor %}
+              {% if not recommendation.original_list %}
+              <li style="color: var(--muted); font-style: italic;">No original results</li>
+              {% endif %}
+            </ul>
+          </div>
+
+          <!-- Recommended Results Column (S') -->
+          <div class="results-column">
+            <h3 class="column-header" style="color: #ffa07a;">Recommended Documents - S' ({{ recommendation.recommended_list|length }})</h3>
+            <ul>
+              {% for doc in recommendation.recommended_list %}
+              <li>
+                <a
+                  href="{{ url_for('serve_doc', filepath=links[doc]) }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="color: inherit; text-decoration: none; display: block"
+                >
+                  <div style="color: #1a73e8; font-size: 13px">{{ links[doc] }}</div>
+                  <div style="margin-top: 6px; font-size: 15px; font-weight: 600; color: #ffa07a;">
+                    {{ titles[doc] }}
+                  </div>
+                  {% if snippets[doc] %}
+                  <div style="margin-top: 6px; color: #5f6368; font-size: 13px">{{ snippets[doc] }}</div>
+                  {% endif %}
+                  {% if recommendation.recommendation_reasons and doc in recommendation.recommendation_reasons %}
+                  <div style="margin-top: 6px; font-size: 12px; color: var(--muted); font-style: italic;">
+                    Recommended because it's similar to: 
+                    {% for source_doc, score in recommendation.recommendation_reasons[doc][:3] %}
+                      <span style="color: #ff6b6b;">{{ titles[source_doc] if source_doc in titles else source_doc }}</span>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </a>
+              </li>
+              {% endfor %}
+              {% if not recommendation.recommended_list %}
+              <li style="color: var(--muted); font-style: italic;">No recommended documents found</li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+        {% else %}
+        <div class="no-match">No Match...</div>
+        {% endif %}
+
+        {% elif reformulation and reformulation.has_expansion %}
         <!-- Query expansion info banner -->
         <div style="background: #000000; padding: 12px; margin-bottom: 16px; border-radius: 4px; border-left: 4px solid #1967d2;">
           <div style="font-weight: 600; margin-bottom: 8px;">Query expanded with: <span style="color: #1967d2;">{{ reformulation.expansion_terms|join(', ') }}</span></div>
